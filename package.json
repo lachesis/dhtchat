@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "bittorrent-dht": "^11.0.4",
+    "bittorrent-dht-sodium": "^1.2.0",
+    "commander": "^10.0.1"
+  }
+}

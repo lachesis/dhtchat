@@ -1,0 +1,72 @@
+Write a node application that implements a CLI with the following parameters. You should write stub functions - do not try to implement actual behavior, just the command line interface and boilerplate. However, implement --help fully. Don't write explanations - just return a .mjs file. Import any npm package that you need and I will install it.
+
+Commands:
+* dhtchat genkey -> generate a new key and sequence number
+* dhtchat publish --key <sk> --sequence <int> <string message> -> publish a message to the DHT
+* dhtchat subscribe <pubkey> [pubkey...] -> subscribe to messages issued by specific key(s) and print each message to the console as received
+* dhtchat get <pubkey> -> get the latest/current message from a public key
+
+
+
+
+
+You are going to help me write dhtchat, a nodejs program that uses the bittorrent-dht library to implement a chat client using by posting mutable content to the Bittorrent DHT under a given key.
+
+First, we are going to implement a class called DHTChat to act as the core of this program. It will have the following members:
+* key => an ED25519 keypair (object containing `sk` and `pk`)
+* seq => an integer representing the current newest message on the DHT
+* subs => a list of users who we want to monitor (objects with `pk` and `handle`)
+
+It will implement the following methods:
+* genkey()  // creates a new ed25519 keypair and stores it in `key`; sets seq to 0
+* publish(message)  // publishes the message to the DHT; increments seq
+* get(pubkey)  // gets the latest message published by the user
+
+I have the following example code for you to consider:
+
+// get.mjs
+import ed from 'bittorrent-dht-sodium'
+import DHT from 'bittorrent-dht'
+const dht = new DHT({ verify: ed.verify }) // you MUST specify the "verify" param if you want to get mutable content, otherwise null will be returned
+
+// sha1 hash of the ed25519 key used to set
+const key = Buffer.from([156,85,92,255,226,174,204,153,160,102,40,96,193,76,6,96,167,52,50,203]);
+
+dht.get(key, function (err, res) {
+  //console.log("Got RES and err", {res, err})
+  console.log("DATA", {data: res.v.toString('utf8')})
+})
+
+
+// put.mjs
+import ed from 'bittorrent-dht-sodium'
+import DHT from 'bittorrent-dht'
+const dht = new DHT()
+
+// generate a key like this
+//const keypair = ed.keygen()
+//console.log("key", {k: JSON.stringify(keypair)})
+
+// create it manually like this
+const keypair = {
+  pk: Buffer.from([248,192,49,252,185,116,234,130,255,217,63,132,151,254,53,172,240,135,215,252,74,81,234,216,209,75,128,164,89,2,159,75]),
+  sk: Buffer.from([254,41,221,61,60,35,244,180,247,24,179,135,221,123,226,52,8,44,36,211,55,75,163,47,61,74,191,251,96,228,108,226,248,192,49,252,185,116,234,130,255,217,63,132,151,254,53,172,240,135,215,252,74,81,234,216,209,75,128,164,89,2,159,75]),
+};
+
+const value = Buffer.alloc(200).fill('somethingelse') // the payload you want to send
+const opts = {
+  k: keypair.pk,
+  seq: 1,
+  v: value,
+  sign: function (buf) {
+    return ed.sign(buf, keypair.sk)
+  }
+}
+
+dht.put(opts, function (err, hash) {
+  console.error('error=', err)
+  console.log('hash=', JSON.stringify(hash));
+})
+
+
+
